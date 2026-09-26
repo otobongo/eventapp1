@@ -74,6 +74,10 @@ export const cemDepartments = pgTable("cem_departments", {
   // would corrupt history. Set deleted_at = now() instead and filter
   // reads with isNull(deleted_at).
   deleted_at: timestamp("deleted_at"),
+  // Free-text notes about the department's purpose (e.g. "Children's
+  // ministry for ages 4-12"). Optional. Added so CSV imports + the
+  // Add Department form can carry context.
+  description: text("description"),
   created_at: timestamp("created_at").defaultNow(),
 });
 

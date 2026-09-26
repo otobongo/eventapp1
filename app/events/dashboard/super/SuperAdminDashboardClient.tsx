@@ -5,7 +5,7 @@
 // Tabs: Forwarded (ready_for_approval) / Approved / Returned / All.
 // Per-row actions on Forwarded: Approve / Send Back / Delete.
 
-import { Eye, Trash2, FileText, Settings, Ban, BookOpen } from "lucide-react";
+import { Eye, Trash2, FileText, Settings, Ban, BookOpen, Users } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -135,6 +135,13 @@ export function SuperAdminDashboardClient({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link
+            href="/events/dashboard/super/members"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-cal-border bg-transparent px-4 text-[13px] font-medium text-cal-text transition-colors hover:bg-cal-bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cal-accent focus-visible:ring-offset-2"
+          >
+            <Users className="h-3.5 w-3.5" aria-hidden="true" />
+            Members
+          </Link>
           <Link
             href="/events/dashboard/super/audit"
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-cal-border bg-transparent px-4 text-[13px] font-medium text-cal-text transition-colors hover:bg-cal-bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cal-accent focus-visible:ring-offset-2"

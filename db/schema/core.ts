@@ -24,6 +24,28 @@ export const domainVerificationStatusEnum = pgEnum("domain_verification_status",
   "failed", // Verification attempted but failed
 ]);
 
+// Tenant-scoped membership status (church-specific status of a person
+// within a given tenant). Distinct from core_tenant_users.status,
+// which controls whether the person has app access at all.
+//
+// - visitor:  First-time or occasional attender
+// - regular:  Attends reliably, hasn't formally joined
+// - member:   Formally joined the church
+// - leader:   Heads a department, ministry, or team
+// - staff:    Paid employee
+// - inactive: No longer attending. Preserves history without churn.
+//             Note: this only marks the person as inactive in CHURCH
+//             terms; app access is still controlled by
+//             core_tenant_users.status.
+export const memberStatusEnum = pgEnum("member_status", [
+  "visitor",
+  "regular",
+  "member",
+  "leader",
+  "staff",
+  "inactive",
+]);
+
 // ── core_tenants ──────────────────────────────────────────────────────
 // A church or organization. Identified by slug (subdomain) or custom domain.
 
@@ -149,3 +171,64 @@ export const coreTenantDomains = pgTable("core_tenant_domains", {
   ssl_provisioned_at: timestamp("ssl_provisioned_at"),
   added_by: uuid("added_by").references(() => coreUsers.id),
 });
+
+// ── core_tenant_member_profiles ─────────────────────────────────────
+//
+// Tenant-scoped, app-agnostic information about a person within a
+// specific tenant. The "rich profile" that future apps (Fold,
+// Stedfast, MPR Portal) all share. CEM consumes it via joins, never
+// duplicates it.
+//
+// Architectural shape (Pattern A — see thread on identity model):
+//
+//   core_users                  ← global identity (email, name, avatar)
+//   core_tenant_users           ← "this person belongs to this church"
+//   core_tenant_member_profiles ← THIS table: church-specific data
+//                                  about that person (phone, status,
+//                                  joined date, etc.)
+//   core_tenant_user_roles      ← per-app permissions
+//
+// Why a separate table instead of columns on core_users or
+// core_tenant_users:
+//   - core_users is identity only; it stays small.
+//   - core_tenant_users holds a foreign key + state, not data fields.
+//   - This separation lets Fold/Stedfast etc. extend the profile
+//     with their own optional columns over time without bloating
+//     the membership row.
+//
+// Composite PK (tenant_id, user_id): one profile per person per
+// tenant. Same person at two churches → two profile rows, possibly
+// different data (different phone, different membership_status).
+//
+// SECURITY:
+//   - Tenant-scoped at the row level by definition.
+//   - RLS policies (added in the migration) require the caller to
+//     either be a member of the tenant, or a platform admin.
+
+export const coreTenantMemberProfiles = pgTable(
+  "core_tenant_member_profiles",
+  {
+    tenant_id: uuid("tenant_id")
+      .notNull()
+      .references(() => coreTenants.id, { onDelete: "cascade" }),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => coreUsers.id, { onDelete: "cascade" }),
+    // Contact (optional)
+    phone: text("phone"),
+    city: text("city"),
+    // Joining context
+    joined_church_at: timestamp("joined_church_at"),
+    membership_status: memberStatusEnum("membership_status").default("visitor"),
+    // Communication opt-ins (default false; users opt in explicitly)
+    communication_email_opt_in: boolean("communication_email_opt_in").default(false),
+    communication_sms_opt_in: boolean("communication_sms_opt_in").default(false),
+    // Free-text notes for admins. NEVER shown to the member themselves.
+    notes: text("notes"),
+    created_at: timestamp("created_at").defaultNow(),
+    updated_at: timestamp("updated_at").defaultNow(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.tenant_id, table.user_id] }),
+  }),
+);

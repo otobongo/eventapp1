@@ -64,6 +64,13 @@
       "when": 1778322441701,
       "tag": "0008_easy_rhodey",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1778329107576,
+      "tag": "0009_striped_rhino",
+      "breakpoints": true
     }
   ]
 }
